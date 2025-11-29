@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang='ko'>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bagel+Fat+One&family=Black+Han+Sans&family=Gaegu&family=Nanum+Gothic+Coding&family=Nanum+Gothic:wght@400;700&family=Rubik+Iso&family=Stylish&display=swap" rel="stylesheet">
+<head>
+ <title>틀린 그림 찾기</title>
+</head>
+<style>
+    @keyframes falseAnimation {
+          
+            25% { transform: rotate(7deg);}
+            50% { transform: rotate(-7deg);}
+            75% { transform: rotate(7deg);}
+            100% { transform: rotate(-7deg);}
+        }
+
+    
+</style>
+
+<body>
+
+    <header id="head" style=" width: 90%; height: 100px; margin: auto; margin-bottom: 15px; margin-top: 15px; ">
+        <div style=" width: 30%; height: 100%; display: inline-block;"><img src="images/background.gif" width="90%" height="100%"></div> 
+        <div style=" width: 36%; height: 100%; margin-right: 15px; margin-left: 15px; display: inline-block; vertical-align: top;"><p style="font-size: 3em; text-align: center; margin-top: 20px; font-family: 'Bagel Fat One';">틀린 그림 찾기</p></div> 
+        <div style=" width: 30%; height: 100%; display: inline-block;"><img src="images/background.gif" width="90%" height="100%"></div> 
+    </header>
+    <audio id="backgroundMusic" src="audio/backgroundMusic1.mp3" loop></audio>
+
+    
+    <article id="content" style=" width: 90%; height: 350px; margin: auto;">
+    
+    
+
+    <div id="before1" style="width : 660px; height:350px; display: inline-block; border: 5px solid greenyellow;" ><img id="beforePosition"  alt="before img request" style="width: 100%; height: 100%;" > </div>  
+
+    <div id="divID" style="display: inline-block; border: 5px solid greenyellow;">
+    <canvas id="canvas" width="660px" height="350px"  style="background-color: aliceblue;"></canvas>
+    </div>
+
+ <input type="button" value="설정 on/off" onclick="set()">
+ 
+ <input type="button" value="게임 시작" onclick="start()">
+ 
+ <input type="button" value="정답 보기" onclick="answerShow()">
+
+ <fieldset id="set" style="visibility: hidden;">
+    <legend>크기 설정</legend>
+    가로 : <input type="text" size="10" value="50" id="sizeX">
+    세로 : <input type="text" size="10" value="50" id="sizeY">
+ </fieldset>
+ <div id="timerDiv" style="visibility: hidden; width: 1350px; height: 60px;" >
+ <canvas id="timerBar"   width="1350px" height="50px" style="background-color: red; margin-top: 5px; "></canvas>
+</div>
+
+ <img id="life" style="width: 200; height: 100px; visibility: hidden;"></img>
+ <p id="alert" style="display: inline-block; font-size: 2em;" ></p>
+
+</article>
+
+</body>
+<script>
+    let wla=[];//wrong location array 틀린 부분 위치 기억하는 배열
+    let rememberXY=[];
+    let gameStart=false;
+    let quizecount=0;
+    let ready=false;
+
+    //배경음악 설정
+    let audioAddress=["audio/backgroundMusic1.mp3",
+    "audio/backgroundMusic2.mp3",
+    "audio/backgroundMusic3.mp3",
+    "audio/backgroundMusic4.mp3",
+    "audio/backgroundMusic5.mp3",
+    "audio/backgroundMusic6.mp3",
+    "audio/backgroundMusic7.mp3",
+    "audio/backgroundMusic8.mp3",
+    "audio/backgroundMusic9.mp3",
+    "audio/backgroundMusic10.mp3",
+    "audio/backgroundMusic11.mp3",
+    "audio/backgroundMusic12.mp3",
+    "audio/backgroundMusic13.mp3"];
+
+
+
+
+    let canvas=document.getElementById("canvas");
+    let context=canvas.getContext("2d");
+
+    let timerCanvas=document.getElementById("timerBar");
+    let timerContext=timerCanvas.getContext("2d");
+
+    let img=new Image();
+
+    //=========================이 부분을 계속 수정하기 ===============================
+    img.src="./images/after.jpg";
+    
+    img.onload=function()
+    {
+        context.drawImage(img,0,0,canvas.width,canvas.height);
+        document.getElementById("beforePosition").src="./images/before.jpg";
+    }
+
+    let lifeimg=document.getElementById("life");
+    let lifelmgs=["./images/heart5.png","./images/heart4.png","./images/heart3.png","./images/heart2.png","./images/heart1.png","./images/fail.gif","./images/success.gif"];
+    let imageIndex=0;
+
+    let minusBarSize=timerCanvas.width/30;
+    let TimerID=null;
+    function timerDown()
+    {
+        timerContext.fillRect(0,0,timerCanvas.width,timerCanvas.height);
+        let size=timerCanvas.width-minusBarSize;
+        if(size<0)
+        { 
+            document.getElementById("alert").innerHTML="시간 초과ㅠ.ㅠ 틀린 그림 맞추기 실패!!";
+            lifeimg.src=lifelmgs[5];
+            gameStart=false;
+            if(TimerID!=null)
+            {
+                clearInterval(TimerID);
+                document.getElementById("backgroundMusic").pause();
+            }
+        }
+        else{
+            timerCanvas.width=size;
+            timerContext.fillStyle="red";
+            timerContext.fillRect(0,0,timerCanvas.width,timerCanvas.height);
+        }
+    }
+
+    function cursordown()
+    {
+        document.getElementById("divID").style.cursor="url('images/mouseout.png'),auto";
+    }
+    
+    function cursorup()
+    {
+        document.getElementById("divID").style.cursor="url('images/mouse.png'),auto";
+
+    }
+
+    canvas.onmousedown=function(event){quize(event)};
+    
+
+    window.onload=function()
+    {
+        lifeimg.src=lifelmgs[imageIndex];
+        
+    }
+   
+
+    let checkArr=[];
+    function quize(e)
+    {
+        let x=e.offsetX;
+        let y=e.offsetY;
+       
+        let status=document.getElementById("set").style.visibility;
+        //만약 visible이라면 설정인 상태
+        if(status=="visible")
+        {
+            let sizeX=parseInt(document.getElementById("sizeX").value);
+            let sizeY=parseInt(document.getElementById("sizeY").value);
+            context.fillStyle="red";
+            context.fillRect(x-sizeX/2,y-sizeY/2,sizeX,sizeY);
+            //이때의 x,y,sizeX,sizeY를 기억해둔다.
+            let position={
+                x:x-sizeX/2,
+                y:y-sizeY/2,
+                sizeX:sizeX,
+                sizeY:sizeY
+            }
+            let rememberLocation={
+                x:x,
+                y:y
+            }
+            console.log(rememberLocation.x,rememberLocation.y);
+            rememberXY.push(rememberLocation);
+            console.log(position.x,position.y,position.sizeX,position.sizeY);
+            wla.push(position);
+        }
+        //퀴즈
+        else if(status=="hidden"&&gameStart==true)
+        {
+            //x,y가 범위 안에 있는지 확인하기
+            let success=false;
+            for(let i=0; i<wla.length; i++)
+            {
+                console.log(wla[i].x,wla[i].y,wla[i].sizeX,wla[i].sizeY);
+                console.log(x,y)
+                if((x>=wla[i].x&&x<=wla[i].x+wla[i].sizeX)&&(y>=wla[i].y&&y<=wla[i].y+wla[i].sizeY))
+                {
+                    //만약에 이미 맞춘 곳이라면 아무것도 안하고 넘어가기.
+                    //-1 이라면 포함되있지 않다는 것. => 넘어가기
+                    //-1 이 아니라면 포함되있으므로 그 곳은 체크 안하기.
+                    console.log(checkArr.indexOf(i));
+                    if(checkArr.indexOf(i)!=-1)
+                    {
+                        return;
+                    }
+
+                    success=true;
+                    checkArr.push(i);
+                    break;
+                }
+            }
+            if(success==true)
+            {
+                context.beginPath();
+                context.strokeStyle="blue";
+               
+                context.arc(x,y,30,0,2*Math.PI);
+                context.lineWidth=2;
+                context.stroke();
+
+                quizecount++;
+                if(quizecount==wla.length)
+                {
+                    lifeimg.src=lifelmgs[6];
+                    document.getElementById("alert").innerHTML="모두 맞추셨어요!! 축하드립니다!!!";
+                    gameStart=false;
+                    document.getElementById("timerDiv").style.visibility="hidden";
+                    clearInterval(TimerID);
+                    document.getElementById("backgroundMusic").pause();
+                    return;
+                }
+                
+            }
+            else{
+
+                canvas.style.animation="none";
+                void canvas.offsetWidth;
+                canvas.style.animation="falseAnimation 1s ease";
+               
+
+
+                context.beginPath();
+                context.strokeStyle="red";
+                context.moveTo(x-25,y-25);
+                context.lineTo(x+25,y+25);
+
+                context.moveTo(x-25,y+25);
+                context.lineTo(x+25,y-25);
+
+                context.lineWidth=2;
+                context.stroke();
+
+
+                imageIndex++;
+                lifeimg.src=lifelmgs[imageIndex];
+                if(imageIndex==5)
+                {
+
+                    document.getElementById("alert").innerHTML="목숨을 모두 잃었습니다. 틀린 그림 맞추기 실패!!";
+                    document.getElementById("timerDiv").style.visibility="hidden";
+                    clearInterval(TimerID);
+                    gameStart=false;
+                    document.getElementById("backgroundMusic").pause();
+                    return;
+                }
+               
+
+            }
+        }
+        
+    }
+
+    function set()
+    {
+        let fieldset=document.getElementById("set");
+        let flag=fieldset.style.visibility;
+        if(flag=="hidden")
+        {
+            fieldset.style.visibility="visible";
+        }
+        else{
+            fieldset.style.visibility="hidden";
+        }
+    }
+
+    
+    
+    function start()
+    {
+        context.drawImage(img,0,0,canvas.width,canvas.height);
+        let fieldset=document.getElementById("set");
+        let flag=fieldset.style.visibility;
+
+        let div=document.getElementById("divID");
+        div.onmousedown=cursordown;
+        div.onmouseup=cursorup;
+
+        document.getElementById("divID").style.cursor="url('images/mouse.png') 20 20 , auto";
+
+        if(flag=="visible")
+        {
+            fieldset.style.visibility="hidden";
+        }
+        fieldset.style.display="none";
+        document.getElementById("timerDiv").style.visibility="visible";
+        TimerID=setInterval("timerDown()",1000);
+        ready=true;
+        gameStart=true;
+        lifeimg.style.visibility="visible";
+        document.getElementById("alert").innerHTML="게임이 시작되었습니다. 틀린 그림을 맞춰보세요!!";
+        let audio=document.getElementById("backgroundMusic");
+        
+        audio.src=audioAddress[Math.floor(Math.random()* audioAddress.length)];
+        audio.play();
+    }
+
+
+    function answerShow()
+    {
+        for(let i=0; i<rememberXY.length; i++)
+        {
+            context.beginPath();
+            context.strokeStyle="yellow";
+            context.lineWidth=4;
+            context.arc(rememberXY[i].x,rememberXY[i].y,30,0,Math.PI*2);
+            context.stroke();
+
+        }
+    }
+</script>
+</html>
