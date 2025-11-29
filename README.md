@@ -17,6 +17,11 @@
 
 클릭 시 게임 플레이!
 
+### 🎥 시연 영상
+[![시연 영상](https://img.youtube.com/vi/HKWUzKDn9Eo/0.jpg)](https://youtu.be/HKWUzKDn9Eo)
+> 🔗 **[전체 시연 영상 보기](https://youtu.be/HKWUzKDn9Eo)** - 실제 게임 플레이 과정 확인
+
+
 ---
 
 ## 📌 활동 정보
